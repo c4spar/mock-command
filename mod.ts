@@ -226,7 +226,7 @@ export type MockCommandOutputOptions = Partial<Deno.CommandOutput>;
  * > Make sure to call {@linkcode resetCommand} once at the end of each test
  * > step to restore the original {@linkcode Deno.Command} class.
  *
- * @example Mock {@linkcode Deno.Command} call(s)
+ * @example Mock shell commands mad with {@linkcode Deno.Command}
  *
  * ```ts
  * import { assertEquals } from "@std/assert";
