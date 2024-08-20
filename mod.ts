@@ -89,7 +89,7 @@ import { equal } from "@std/assert/equal";
 
 const mocks: Array<CommandMock> = [];
 
-const originalCommand: typeof Deno.Command = Deno.Command;
+let originalCommand: typeof Deno.Command | null = null;
 
 let isGlobalMock = false;
 
@@ -288,10 +288,11 @@ export function mockCommand(
  */
 export function resetCommand(): void {
   if (!isGlobalMock) {
-    if (Deno.Command === originalCommand) {
+    if (!originalCommand) {
       return;
     }
     Deno.Command = originalCommand;
+    originalCommand = null;
   }
 
   if (mocks.length) {
@@ -324,9 +325,10 @@ export function resetGlobalCommand() {
 }
 
 function mockCommandApi() {
-  if (Deno.Command !== originalCommand) {
+  if (originalCommand) {
     return;
   }
+  originalCommand = Deno.Command;
 
   Deno.Command = class Command implements Deno.Command {
     readonly #command: string | URL;
@@ -386,15 +388,20 @@ function matchCommand(
   }
 
   for (const mock of mocks) {
-    if (mock.matchOptions.command && mock.matchOptions.command !== command) {
-      continue;
-    }
     if (
-      mock.matchOptions.args && !equal(mock.matchOptions.args, options?.args)
+      mock.matchOptions.command && mock.matchOptions.command !== command
     ) {
       continue;
     }
-    if (mock.matchOptions.cwd && !equal(mock.matchOptions.cwd, options?.cwd)) {
+    if (
+      mock.matchOptions.args &&
+      !equal(mock.matchOptions.args, options?.args)
+    ) {
+      continue;
+    }
+    if (
+      mock.matchOptions.cwd && !equal(mock.matchOptions.cwd, options?.cwd)
+    ) {
       continue;
     }
     if (
@@ -403,7 +410,9 @@ function matchCommand(
     ) {
       continue;
     }
-    if (mock.matchOptions.env && !equal(mock.matchOptions.env, options?.env)) {
+    if (
+      mock.matchOptions.env && !equal(mock.matchOptions.env, options?.env)
+    ) {
       continue;
     }
     if (
@@ -418,22 +427,28 @@ function matchCommand(
     ) {
       continue;
     }
-    if (mock.matchOptions.stdin && mock.matchOptions.stdin !== options?.stdin) {
-      continue;
-    }
     if (
-      mock.matchOptions.stdout && mock.matchOptions.stdout !== options?.stdout
+      mock.matchOptions.stdin &&
+      mock.matchOptions.stdin !== options?.stdin
     ) {
       continue;
     }
     if (
-      mock.matchOptions.stderr && mock.matchOptions.stderr !== options?.stderr
+      mock.matchOptions.stdout &&
+      mock.matchOptions.stdout !== options?.stdout
+    ) {
+      continue;
+    }
+    if (
+      mock.matchOptions.stderr &&
+      mock.matchOptions.stderr !== options?.stderr
     ) {
       continue;
     }
     if (
       mock.matchOptions.windowsRawArguments !== undefined &&
-      mock.matchOptions.windowsRawArguments !== options?.windowsRawArguments
+      mock.matchOptions.windowsRawArguments !==
+        options?.windowsRawArguments
     ) {
       continue;
     }
