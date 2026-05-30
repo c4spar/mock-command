@@ -291,7 +291,7 @@ export function resetCommand(): void {
     if (!originalCommand) {
       return;
     }
-    Deno.Command = originalCommand;
+    defineCommand(originalCommand);
     originalCommand = null;
   }
 
@@ -330,32 +330,35 @@ function mockCommandApi() {
   }
   originalCommand = Deno.Command;
 
-  Deno.Command = class Command implements Deno.Command {
-    readonly #command: string | URL;
-    readonly #options?: Deno.CommandOptions;
-    constructor(
-      command: string | URL,
-      options?: Deno.CommandOptions,
-    ) {
-      this.#command = command;
-      this.#options = options;
-    }
+  defineCommand(
+    class Command implements Deno.Command {
+      readonly #command: string | URL;
+      readonly #options?: Deno.CommandOptions;
 
-    spawn(): Deno.ChildProcess {
-      const error = new Error("Deno.Command.spawn mock not implemented.");
-      Error.captureStackTrace(error, Deno.Command.prototype.spawn);
-      throw error;
-    }
+      constructor(
+        command: string | URL,
+        options?: Deno.CommandOptions,
+      ) {
+        this.#command = command;
+        this.#options = options;
+      }
 
-    outputSync(): Deno.CommandOutput {
-      return outputSync(this.#command, this.#options);
-    }
+      spawn(): Deno.ChildProcess {
+        const error = new Error("Deno.Command.spawn mock not implemented.");
+        Error.captureStackTrace(error, Deno.Command.prototype.spawn);
+        throw error;
+      }
 
-    // deno-lint-ignore require-await
-    async output(): Promise<Deno.CommandOutput> {
-      return outputSync(this.#command, this.#options);
-    }
-  };
+      outputSync(): Deno.CommandOutput {
+        return outputSync(this.#command, this.#options);
+      }
+
+      // deno-lint-ignore require-await
+      async output(): Promise<Deno.CommandOutput> {
+        return outputSync(this.#command, this.#options);
+      }
+    },
+  );
 
   function outputSync(
     command: string | URL,
@@ -475,4 +478,12 @@ function mockCommandOutput(
 interface CommandMock {
   matchOptions: MatchCommandOptions;
   mockOptions: MockCommandOutputOptions;
+}
+
+function defineCommand(command: typeof Deno.Command): void {
+  Object.defineProperty(Deno, "Command", {
+    value: command,
+    writable: true,
+    configurable: true,
+  });
 }
